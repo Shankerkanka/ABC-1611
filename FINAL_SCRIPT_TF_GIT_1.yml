@@ -1,0 +1,81 @@
+---
+- name: Install Terraform and Git
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update the package manager
+      apt:
+        update_cache: yes
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+    - name: Ensure the necessary packages are installed (for Ubuntu/Debian systems)
+      apt:
+        name:
+          - unzip
+          - wget
+        state: present
+      become: yes
+    - name: Ensure the repository is cloned
+      git:
+        repo: https://github.com/Shankerkanka/TF_AZ_FILES.git
+        dest: /home/azureuser/
+        version: main
+        update: yes
+      tags:
+        - repo_clone  
+    - name: Ensure Terraform is initialized
+      command: terraform init
+      args:
+        chdir: /home/azureuser
+      register: init_output
+    - name: Display Terraform init output
+      debug:
+        msg: /home/azureuser/demo
+    - name: Apply Terraform scripts (auto-approve)
+      command: terraform apply -auto-approve
+      args:
+        chdir: /home/azureuser/demo
+      register: apply_output
+    - name: Display Terraform apply output
+      debug:
+        msg: "{{ apply_output.stdout }}"
+    - name: Capture the output to a file (optional)
+      copy:
+        content: "{{ apply_output.stdout }}"
+        dest: /tmp/terraform_apply_output.txt
+    - name: Remove cloned repositories
+      file:
+        path: /path/to/cloned/repo
+        state: absent
+      when: ansible_facts['os_family'] == 'Debian' or ansible_facts['os_family'] ==
+        'RedHat'
+    - name: Remove specific created files
+      file:
+        path: /path/to/created/file.txt
+        state: absent
+      when: ansible_facts['os_family'] == 'Debian' or ansible_facts['os_family'] ==
+        'RedHat'
+    - name: Remove directories matching a pattern
+      find:
+        paths: /path/to/parent_directory
+        patterns: pattern
+        recurse: yes
+      register: items_to_remove
+    - name: Remove matched items
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ items_to_remove.files }}"
+    - name: Remove cloned Git repository directory
+      file:
+        path: /path/to/cloned/repo
+        state: absent
+      when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+    - name: Remove additional cloned directories or files (optional)
+      file:
+        path: /path/to/another/cloned/directory
+        state: absent
+      when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+
